@@ -1,0 +1,16 @@
+debug = true
+mode = "development"
+
+[argon]
+secret = "hello"
+
+[jwt]
+secret = "hello"
+duration = 1
+
+[database]
+echo = true
+
+[service]
+host = "0.0.0.0"
+port = "5000"

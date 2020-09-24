@@ -1,0 +1,71 @@
+services:
+  - postgres
+
+variables:
+  GIT_SSL_NO_VERIFY: "1"
+  POSTGRES_DB: users
+  POSTGRES_USER: runner
+  POSTGRES_PASSWORD: secret
+
+stages:
+  - check
+  - build
+  - test
+
+.update-rust: &update-rust
+  - rustup update
+  - cargo update
+
+.check-rust: &check-rust
+  - rustc --version
+  - cargo --version
+
+format:
+  stage: check
+  image: rust:latest
+  before_script:
+   - *check-rust
+  script:
+    - rustup component add rustfmt
+    - cargo fmt --all -- --check
+
+lint:
+  stage: check
+  image: rust:latest
+  before_script:
+   - *check-rust
+  script:
+    - rustup component add clippy
+    - cargo clippy --workspace --bins --examples --tests --release -- -D warnings
+
+build-release:
+  stage: build
+  image: rust:latest
+  before_script:
+    - *check-rust
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/service
+  # cache:
+  #   key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+  #   paths:
+  #     - Cargo.lock
+  #     - target/release/
+
+test-release:
+  stage: test
+  image: postgres
+  variables:
+    GIT_SSL_NO_VERIFY: "1"
+    POSTGRES_DB: users
+    POSTGRES_USER: runner
+    POSTGRES_PASSWORD: secret
+    RUN_MODE: testing
+    DATABASE_TEST_URL: "postgres://runner:secret@postgres:5432/users"
+  dependencies:
+    - build-release
+  script:
+    - psql "$DATABASE_TEST_URL" < db/create.sql
+    - target/release/service test

@@ -1,0 +1,17 @@
+debug = true
+testing = true    # We need to overwrite the default
+mode = "testing"  # This can probably be gone
+
+[argon]
+secret = "hello"
+
+[jwt]
+secret = "hello"
+duration = 15
+
+[database]
+echo = true
+
+[service]
+host = "0.0.0.0"
+port = "5000"
