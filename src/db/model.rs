@@ -4,12 +4,10 @@ use snafu::Snafu;
 use std::convert::TryFrom;
 use uuid::Uuid;
 
-pub type EntityId = Uuid;
-
 /// A user registered with the application (ie, stored in DB)
 #[derive(Debug, Clone)]
 pub struct ContainerEntity {
-    pub id: EntityId,
+    pub id: String,
     pub name: String,
     pub image: String,
     pub created_at: DateTime<Utc>,
@@ -19,8 +17,12 @@ pub struct ContainerEntity {
 // From sqlx realworld example
 #[async_trait]
 pub trait ProvideData {
-    async fn create_container(&mut self, name: &str, image: &str)
-        -> ProvideResult<ContainerEntity>;
+    async fn create_container(
+        &mut self,
+        id: &str,
+        name: &str,
+        image: &str,
+    ) -> ProvideResult<ContainerEntity>;
 
     async fn get_all_containers(&mut self) -> ProvideResult<Vec<ContainerEntity>>;
 
@@ -29,6 +31,8 @@ pub trait ProvideData {
         username: &str,
     ) -> ProvideResult<Option<ContainerEntity>>;
 }
+
+pub type EntityId = Uuid;
 
 /// A user registered with the application (ie, stored in DB)
 #[derive(Debug, Clone)]

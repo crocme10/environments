@@ -8,7 +8,7 @@ CREATE SCHEMA main;
 CREATE EXTENSION pg_trgm SCHEMA main;
 CREATE EXTENSION pgcrypto SCHEMA main;
 CREATE TABLE main.containers (
-  id UUID PRIMARY KEY DEFAULT main.gen_random_uuid(),
+  id VARCHAR(128) PRIMARY KEY,
   name VARCHAR(128) NOT NULL UNIQUE CHECK (name <> ''),
   image VARCHAR(128) NOT NULL CHECK (image <> ''),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

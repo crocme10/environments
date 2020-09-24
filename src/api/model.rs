@@ -8,7 +8,7 @@ use crate::db::model::*;
 #[derive(Debug, Deserialize, Serialize, GraphQLObject)]
 #[serde(rename_all = "camelCase")]
 pub struct Container {
-    pub id: EntityId,
+    pub id: String,
     pub name: String,
     pub image: String,
     pub created_at: DateTime<Utc>,

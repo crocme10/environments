@@ -2,7 +2,6 @@ use juniper::{EmptySubscription, FieldResult, IntoFieldError, RootNode};
 use slog::info;
 
 use super::containers;
-use crate::error;
 use crate::state::State;
 
 #[derive(Debug, Clone)]

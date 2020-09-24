@@ -18,7 +18,7 @@ use crate::error;
 
 /// A user registered with the application (Postgres version)
 pub struct ContainerEntity {
-    pub id: model::EntityId,
+    pub id: String,
     pub name: String,
     pub image: String,
     pub created_at: DateTime<Utc>,
@@ -99,16 +99,18 @@ impl Db for PgPool {
 impl model::ProvideData for PgConnection {
     async fn create_container(
         &mut self,
+        id: &str,
         name: &str,
         image: &str,
     ) -> model::ProvideResult<model::ContainerEntity> {
         let container: ContainerEntity = sqlx::query_as(
             r#"
-INSERT INTO main.containers ( name, image )
-VALUES ( $1, $2 )
+INSERT INTO main.containers ( id, name, image )
+VALUES ( $1, $2, $3 )
 RETURNING *
         "#,
         )
+        .bind(id)
         .bind(name)
         .bind(image)
         .fetch_one(self)
