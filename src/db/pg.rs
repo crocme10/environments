@@ -161,6 +161,30 @@ WHERE name = $1
             }
         }
     }
+
+    async fn delete_container_by_name(
+        &mut self,
+        name: &str,
+    ) -> model::ProvideResult<Option<model::ContainerEntity>> {
+        let container: Option<ContainerEntity> = sqlx::query_as(
+            r#"
+DELETE
+FROM main.containers
+WHERE name = $1
+            "#,
+        )
+        .bind(name)
+        .fetch_optional(self)
+        .await?;
+
+        match container {
+            None => Ok(None),
+            Some(container) => {
+                let container = model::ContainerEntity::from(container);
+                Ok(Some(container))
+            }
+        }
+    }
 }
 
 /// A user registered with the application (Postgres version)

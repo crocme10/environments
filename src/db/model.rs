@@ -30,6 +30,11 @@ pub trait ProvideData {
         &mut self,
         username: &str,
     ) -> ProvideResult<Option<ContainerEntity>>;
+
+    async fn delete_container_by_name(
+        &mut self,
+        name: &str,
+    ) -> ProvideResult<Option<ContainerEntity>>;
 }
 
 pub type EntityId = Uuid;

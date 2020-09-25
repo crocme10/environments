@@ -1,5 +1,6 @@
 use bollard::container::{
-    Config, CreateContainerOptions, ListContainersOptions, StartContainerOptions,
+    Config, CreateContainerOptions, ListContainersOptions, RemoveContainerOptions,
+    StartContainerOptions, StopContainerOptions,
 };
 use bollard::image::CreateImageOptions;
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -73,6 +74,8 @@ pub async fn list_containers(
     async move {
         let pool = &context.state.pool;
 
+        info!(context.state.logger, "Listing containers");
+
         let mut tx = pool
             .conn()
             .and_then(Connection::begin)
@@ -97,6 +100,20 @@ pub async fn list_containers(
             msg: "could not commit transaction",
         })?;
 
+        // for debugging, we're printing the ids
+        ids.iter()
+            .for_each(|id| info!(context.state.logger, "id: {}", id));
+
+        // if we're not managing any container, then leave early (without querying docker engine)
+        // if ids is empty, and we're querying docker, than the filter won't work (and we'll get
+        // all the containers)
+        if ids.is_empty() {
+            return Ok(MultiContainersResponseBody {
+                containers: vec![],
+                containers_count: 0,
+            });
+        }
+
         let mut filters = HashMap::new();
         filters.insert("id", ids);
 
@@ -119,7 +136,10 @@ pub async fn list_containers(
             .into_iter()
             .map(|summary| Container {
                 id: summary.id.unwrap_or(String::from("NA")),
-                name: String::from("NA"),
+                name: summary
+                    .names
+                    .map(|names| names.into_iter().next().unwrap_or(String::from("NA")))
+                    .unwrap_or(String::from("NA")),
                 image: summary.image.unwrap_or(String::from("NA")),
                 created_at: DateTime::<Utc>::from_utc(
                     NaiveDateTime::from_timestamp(summary.created.unwrap_or(0), 0),
@@ -223,6 +243,67 @@ pub async fn create_container(
         })?;
 
         Ok(SingleContainerResponseBody::from(container))
+    }
+    .await
+}
+
+/// Delete a container
+pub async fn delete_container(
+    name: &str,
+    context: &Context,
+) -> Result<SingleContainerResponseBody, error::Error> {
+    async move {
+        let options = Some(StopContainerOptions {
+            t: 3, /* stop in 3s */
+        });
+
+        context
+            .state
+            .docker
+            .stop_container(&name, options)
+            .await
+            .context(error::BollardError {
+                msg: "Could not stop container",
+            })?;
+
+        let options = Some(RemoveContainerOptions {
+            force: true,
+            ..Default::default()
+        });
+
+        context
+            .state
+            .docker
+            .remove_container(&name, options)
+            .await
+            .context(error::BollardError {
+                msg: "Could not remove container",
+            })?;
+
+        let pool = &context.state.pool;
+
+        let mut tx = pool
+            .conn()
+            .and_then(Connection::begin)
+            .await
+            .context(error::DBError {
+                msg: "could not initiate transaction",
+            })?;
+
+        let entity =
+            ProvideData::delete_container_by_name(&mut tx as &mut sqlx::PgConnection, &name)
+                .await
+                .context(error::DBProvideError {
+                    msg: "Could not delete container",
+                })?;
+
+        let container = entity.map(Container::from);
+
+        tx.commit().await.context(error::DBError {
+            msg: "could not commit container creation transaction",
+        })?;
+
+        Ok(SingleContainerResponseBody { container })
     }
     .await
 }

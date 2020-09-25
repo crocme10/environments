@@ -59,6 +59,16 @@ impl Mutation {
             .await
             .map_err(IntoFieldError::into_field_error)
     }
+
+    async fn delete_container(
+        &self,
+        name: String,
+        context: &Context,
+    ) -> FieldResult<containers::SingleContainerResponseBody> {
+        containers::delete_container(&name, context)
+            .await
+            .map_err(IntoFieldError::into_field_error)
+    }
 }
 
 type Schema = RootNode<'static, Query, Mutation, EmptySubscription<Context>>;
